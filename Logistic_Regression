@@ -1,0 +1,118 @@
+#Logistic Regression
+# log(Y/(1-Y)) = C + B1X1 + B2X2 + ...
+# Categorical Variable; Classification problem; S-Curve
+
+import pandas as pd     # For Data Analysis
+import numpy as np     # For scientific computation
+import seaborn as sns     # For statistical performing
+import matplotlib.pyplot as plt 
+# get_ipython().run_line_magic('matplotlib', 'inline')
+import math
+
+titanic_data = pd.read_csv("titantic_train.csv")
+#print(titanic_data.head(10))
+print("No. of passengers in original data:" + str(len(titanic_data.index)))
+
+#Analyzing Data
+sns.countplot(x="Survived", data=titanic_data)
+plt.show()
+
+sns.countplot(x="Survived", hue="Sex", data=titanic_data)
+plt.show()
+
+sns.countplot(x="Survived", hue="Pclass", data=titanic_data)
+plt.show()
+#1, 2 class survive more
+#3 or lowest class tend not to survive
+
+titanic_data["Age"].plot.hist()
+plt.show()
+# more young passengers traveling
+
+titanic_data["Fare"].plot.hist(bins=20, figsize=(10,5))
+plt.show()
+
+#titanic_data.info() # see Data Frame
+
+sns.countplot(x = "SibSp", data = titanic_data)
+plt.show()
+#Max on 0 -> Neither children nor spouse were onboard of Titanic
+
+# Data Wrangling on "Age", "Cabin" and "Embarked"
+print titanic_data.isnull() # Check missing data
+# Clean those return "True"
+print titanic_data.isnull().sum() # Check no. of missing data in each column
+
+sns.heatmap(titanic_data.isnull(), yticklabels=False, cmap="viridis")
+plt.show()
+# yellow stands for value of null
+# A lot missing value at columns "Age" and "Cabin"; missing value in column "Marked" also
+# To remove missing value: either replace value with dummy value or simply remove the column
+# 1st do with "Age" column
+sns.boxplot(x="Pclass", y="Age", data=titanic_data)
+plt.show()
+# Passengers in Class 1 and 2 tend to be older than those in Class 3
+
+print titanic_data.head(5)
+# Survivors against Categorical variables
+# "Survived" can be as "y" to be predicted
+# "Cabin" column has "NaN" values
+titanic_data.drop("Cabin", axis=1, inplace=True)	# axis (where to drop labels from): {0 for 'index'; '1' for column}; inplace: If True, do operation inplace and return None.
+titanic_data.dropna(inplace=True)		# drop all with Na values
+print titanic_data.head(5) # check if actually dropped
+
+sns.heatmap(titanic_data.isnull(), yticklabels=False, cbar=False)	# check if values removed
+plt.show()
+# Entired black: no null values
+
+print titanic_data.isnull().sum()
+# Confirmed data is cleaned or wrangled
+
+# Data with a lot of string values. 
+# Need to be converted to actual Categorical variables with dummy variables for logistic regression
+# Or else won't be taken as input
+Gender = pd.get_dummies(titanic_data['Sex'], drop_first=True)
+print Gender.head(5)
+# 0 as False; 1 as True
+# don't need both 'female' and 'male' column as duplicated
+Embark = pd.get_dummies(titanic_data['Embarked'], drop_first=True)
+print Embark.head(5)	# If both "zero", then from third value "C"
+Class = pd.get_dummies(titanic_data['Pclass'], drop_first=True)
+print Class.head(5)	# If both "zero", then from Class "1"
+
+# Next, concatenate these new rules to dataset
+new_data = pd.concat([titanic_data, Gender, Embark, Class], axis=1)		# axis (axis to concatenate along): {0 for 'index'; '1' for column}
+print new_data.head(5)		# Columns 'male' from Gender, 'Q' and 'S' from Embark, and '2' and '3' from Class
+new_data.drop(["PassengerId","Pclass","Name","Sex","Ticket","Embarked"], axis=1, inplace=True)
+print new_data.head(5)
+
+# Train Data
+# First define Independent and Dependent variable
+x = new_data.drop("Survived", axis=1)
+y = titanic_data["Survived"]	# Predict whether passengers survive or not 
+
+from sklearn.model_selection import train_test_split
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1)
+# "test_size" as in split size: here as 30:70 ratio; random_state: eg. set as 1 will take exactly the same sample every time
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression()
+fit = model.fit(x_train, y_train)
+print fit
+prediction = model.predict(x_test)
+print prediction
+
+from sklearn.metrics import classification_report
+report = classification_report(y_test, prediction)
+print report
+# higher than 70% precision not bad
+
+# Calculate accuracy
+from sklearn.metrics import confusion_matrix
+matrix = confusion_matrix(y_test, prediction)
+print matrix
+# Accuracy = ([True Negative + True Positive])/[Total Outcomes] = (105+63)/(105+63+25+21) = 0.7850467
+from sklearn.metrics import accuracy_score
+accuracy = accuracy_score(y_test, prediction)
+print accuracy
+# Good accuracy
